@@ -1,24 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function App() {
-  // 관심사 목록을 상태(State)로 관리합니다. 기본값으로 3가지를 미리 넣어둡니다.
-  const [interests, setInterests] = useState([
-    { id: 1, text: "AX전략" },
-    { id: 2, text: "전략적 투자" },
-    { id: 3, text: "AI Agent 개발" }
-  ]);
+  const [interests, setInterests] = useState([]); // 관심사 목록 (백엔드에서 불러옴)
   const [newInterest, setNewInterest] = useState(""); // 입력창 상태
 
-  // 새로운 관심사를 추가하는 함수
-  const addInterest = () => {
-    if (!newInterest.trim()) return;
-    setInterests([...interests, { id: Date.now(), text: newInterest }]);
-    setNewInterest("");
+  // 처음 화면이 뜰 때 서버에서 기존 데이터(관심사)를 불러옵니다.
+  useEffect(() => { 
+    loadInterests(); 
+  }, []);
+
+  // [GET] 목록 조회
+  const loadInterests = async () => {
+    const res = await fetch(`${API_URL}/memos`);
+    setInterests(await res.json());
   };
 
-  // 관심사 삭제 기능 (필요하다면 사용할 수 있도록 유지)
-  const deleteInterest = (id) => {
-    setInterests(interests.filter((item) => item.id !== id));
+  // [POST] 새로운 관심사 추가
+  const addInterest = async () => {
+    if (!newInterest.trim()) return;
+    await fetch(`${API_URL}/memos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: newInterest }), // 백엔드가 content를 받으므로 유지
+    });
+    setNewInterest(""); 
+    loadInterests(); // 추가 후 목록 다시 불러오기
+  };
+
+  // [DELETE] 관심사 삭제
+  const deleteInterest = async (id) => {
+    await fetch(`${API_URL}/memos/${id}`, { method: "DELETE" });
+    loadInterests(); // 삭제 후 목록 다시 불러오기
   };
 
   return (
@@ -29,7 +43,7 @@ export default function App() {
         👨‍💻 이상석
       </h1>
 
-      {/* 2. 소속 정보 (정적 데이터) */}
+      {/* 2. 소속 정보 */}
       <div style={{ marginBottom: "25px" }}>
         <h3 style={{ color: "#34495e", borderBottom: "2px solid #3498db", paddingBottom: "5px", display: "inline-block" }}>
           소속
@@ -40,7 +54,7 @@ export default function App() {
         </ul>
       </div>
 
-      {/* 3. 관심사 정보 (동적 데이터 - useState 활용) */}
+      {/* 3. 관심사 정보 (백엔드 연동) */}
       <div>
         <h3 style={{ color: "#34495e", borderBottom: "2px solid #2ecc71", paddingBottom: "5px", display: "inline-block" }}>
           관심사
@@ -48,7 +62,7 @@ export default function App() {
         <ul style={{ fontSize: "16px", lineHeight: "1.8", paddingLeft: "20px" }}>
           {interests.map((item) => (
             <li key={item.id} style={{ marginBottom: "8px" }}>
-              {item.text}
+              {item.content}
               <button 
                 onClick={() => deleteInterest(item.id)} 
                 style={{ marginLeft: 10, fontSize: "12px", padding: "2px 6px", cursor: "pointer", border: "1px solid #ccc", borderRadius: "4px", backgroundColor: "#fff" }}
@@ -60,7 +74,7 @@ export default function App() {
         </ul>
       </div>
 
-      {/* 관심사 추가 입력창 (기존 메모 추가 기능 응용) */}
+      {/* 4. 관심사 추가 입력창 */}
       <div style={{ display: "flex", gap: 8, marginTop: "20px" }}>
         <input 
           value={newInterest} 
